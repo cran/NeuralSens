@@ -1,5 +1,5 @@
 Package: NeuralSens
-Version: 0.0.2
+Version: 0.0.3
 Title: Sensitivity Analysis of Neural Networks
 Date: 2019-05-11
 Description: Analysis functions to quantify inputs importance in neural network models. 
@@ -26,6 +26,6 @@ Authors@R: c(
     person(given = "Jaime", family = "Pizarroso Gonzalo", 
       email = "jpizarroso@alu.comillas.edu", role = c("ctb", "cre"))
     )
-Packaged: 2019-06-03 14:29:53 UTC; jaime
+Packaged: 2019-06-08 09:31:17 UTC; jaime
 Repository: CRAN
-Date/Publication: 2019-06-04 12:00:03 UTC
+Date/Publication: 2019-06-08 14:30:10 UTC

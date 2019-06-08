@@ -16,6 +16,11 @@
 #'   \item Plot 2: b/w plot with probability of the chosen class in a 2D map
 #'   \item Plot 3: plot with the stats::predictions of the data provided
 #' }
+#' @details
+#' In case of using an input of class \code{factor} and a package which need to enter
+#' the input data as matrix, the dummies must be created before training the neural network.
+#'
+#' After that, the training data must be given to the function using the \code{trData} argument.
 #' @examples
 #' ## Load data -------------------------------------------------------------------
 #' data("DAILY_DEMAND_TR")
@@ -917,7 +922,10 @@ SensAnalysisMLP.nnet <- function(MLP.fit, .returnSens = TRUE, trData, preProc = 
   finalModel$n <- MLP.fit$n
   finalModel$wts <- MLP.fit$wts
   finalModel$coefnames <- MLP.fit$coefnames
-  names(trData)[!names(trData) %in% MLP.fit$coefnames] <- ".outcome"
+  if(!any(names(trData) == ".outcome")){
+    names(trData)[!names(trData) %in% attr(MLP.fit$terms,"term.labels")] <- ".outcome"
+  }
+
   actfun <- c("linear","sigmoid",
               ifelse(is.factor(trData$.outcome),"sigmoid","linear"))
   SensAnalysisMLP.default(finalModel,
