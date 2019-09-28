@@ -11,6 +11,7 @@
 \alias{SensAnalysisMLP.nn}
 \alias{SensAnalysisMLP.nnet}
 \alias{SensAnalysisMLP.nnetar}
+\alias{SensAnalysisMLP.numeric}
 \title{Sensitivity of NNET models}
 \usage{
 SensAnalysisMLP(MLP.fit, .returnSens = TRUE, plot = TRUE,
@@ -44,11 +45,15 @@ SensAnalysisMLP(MLP.fit, .returnSens = TRUE, plot = TRUE,
 
 \method{SensAnalysisMLP}{nnetar}(MLP.fit, .returnSens = TRUE,
   plot = TRUE, .rawSens = FALSE, ...)
+
+\method{SensAnalysisMLP}{numeric}(MLP.fit, .returnSens = TRUE,
+  plot = TRUE, .rawSens = FALSE, trData, preProc = NULL,
+  terms = NULL, ...)
 }
 \arguments{
-\item{MLP.fit}{fitted model from caret package using nnet method}
+\item{MLP.fit}{fitted neural network model}
 
-\item{.returnSens}{logical value. If \code{TRUE}, sensibility of the model is
+\item{.returnSens}{\code{logical} value. If \code{TRUE}, sensibility of the model is
 returned.}
 
 \item{plot}{\code{logical} whether or not to plot the analysis. By default
@@ -60,9 +65,9 @@ sensitivities. By default is \code{FALSE}.}
 
 \item{...}{additional arguments passed to or from other methods}
 
-\item{trData}{data frame containing the training data of the model}
+\item{trData}{\code{data.frame} containing the data to evaluate the sensitivity of the model}
 
-\item{actfunc}{character vector indicating the activation function of each
+\item{actfunc}{\code{character} vector indicating the activation function of each
 neurons layer.}
 
 \item{preProc}{preProcess structure applied to the training data. See also
@@ -73,7 +78,8 @@ also \code{\link[caret]{train}}}
 }
 \value{
 dataframe with the sensitivities obtained for each variable if
-  .returnSens \code{TRUE}. If there is more than one output, the
+  \code{.returnSens = TRUE}. If \code{.returnSens = FALSE}, the sensitivities without
+  processing are returned in a 3D array. If there is more than one output, the
   sensitivities of each output are given in a list.
 }
 \description{
@@ -88,7 +94,7 @@ In case of using an input of class \code{factor} and a package which
   After that, the training data must be given to the function using the
   \code{trData} argument.
 }
-\section{Output}{
+\section{Plots}{
  \itemize{ \item Plot 1: colorful plot with the
   classification of the classes in a 2D map \item Plot 2: b/w plot with
   probability of the chosen class in a 2D map \item Plot 3: plot with the
@@ -125,11 +131,11 @@ form <- formula(paste(names(fdata.Reg.tr)[1], form, sep = " ~ "))
 
 set.seed(150)
 nnetmod <- nnet::nnet(form,
-                           data = nntrData,
-                           linear.output = TRUE,
-                           size = hidden_neurons,
-                           decay = decay,
-                           maxit = iters)
+                      data = nntrData,
+                      linear.output = TRUE,
+                      size = hidden_neurons,
+                      decay = decay,
+                      maxit = iters)
 # Try SensAnalysisMLP
 NeuralSens::SensAnalysisMLP(nnetmod, trData = nntrData)
 
@@ -239,6 +245,13 @@ nnmod <- neuralnet::neuralnet(form,
 # Try SensAnalysisMLP
 NeuralSens::SensAnalysisMLP(nnmod)
 
+
+## USE DEFAULT METHOD ----------------------------------------------------------
+NeuralSens::SensAnalysisMLP(RegNNET$caret$finalModel$wts,
+                            trData = fdata.Reg.tv,
+                            mlpstr = RegNNET$caret$finalModel$n,
+                            coefnames = RegNNET$caret$coefnames,
+                            actfun = c("linear","sigmoid","linear"))
 
 ################################################################################
 #########################  CLASSIFICATION NNET #################################
