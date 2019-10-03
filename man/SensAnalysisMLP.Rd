@@ -19,7 +19,7 @@ SensAnalysisMLP(MLP.fit, .returnSens = TRUE, plot = TRUE,
 
 \method{SensAnalysisMLP}{default}(MLP.fit, .returnSens = TRUE,
   plot = TRUE, .rawSens = FALSE, trData, actfunc = NULL,
-  preProc = NULL, terms = NULL, ...)
+  preProc = NULL, terms = NULL, output_name = NULL, ...)
 
 \method{SensAnalysisMLP}{train}(MLP.fit, .returnSens = TRUE,
   plot = TRUE, .rawSens = FALSE, ...)
@@ -31,7 +31,7 @@ SensAnalysisMLP(MLP.fit, .returnSens = TRUE, plot = TRUE,
   plot = TRUE, .rawSens = FALSE, ...)
 
 \method{SensAnalysisMLP}{list}(MLP.fit, .returnSens = TRUE,
-  plot = TRUE, .rawSens = FALSE, trData, ...)
+  plot = TRUE, .rawSens = FALSE, trData, actfunc, ...)
 
 \method{SensAnalysisMLP}{mlp}(MLP.fit, .returnSens = TRUE, plot = TRUE,
   .rawSens = FALSE, trData, preProc = NULL, terms = NULL, ...)
@@ -53,7 +53,7 @@ SensAnalysisMLP(MLP.fit, .returnSens = TRUE, plot = TRUE,
 \arguments{
 \item{MLP.fit}{fitted neural network model}
 
-\item{.returnSens}{\code{logical} value. If \code{TRUE}, sensibility of the model is
+\item{.returnSens}{\code{logical} value. If \code{TRUE}, sensitivity of the model is
 returned.}
 
 \item{plot}{\code{logical} whether or not to plot the analysis. By default
@@ -75,6 +75,9 @@ neurons layer.}
 
 \item{terms}{function applied to the training data to create factors. See
 also \code{\link[caret]{train}}}
+
+\item{output_name}{\code{character} name of the output variable in order to avoid
+changing the name of the output variable in \code{trData} to '.outcome'}
 }
 \value{
 dataframe with the sensitivities obtained for each variable if
@@ -162,14 +165,12 @@ caretmod <- caret::train(form = DEM~.,
 NeuralSens::SensAnalysisMLP(caretmod)
 
 ## Train h2o NNET --------------------------------------------------------------
-# Creaci?n de un cluster local con todos los cores disponibles
+# Create a cluster with 4 available cores
 h2o::h2o.init(ip = "localhost",
-              # -1 indica que se empleen todos los cores disponibles.
               nthreads = 4,
-              # M?xima memoria disponible para el cluster.
               max_mem_size = "2g")
 
-# Se eliminan los datos del cluster por si ya hab?a sido iniciado.
+# Reset the cluster
 h2o::h2o.removeAll()
 fdata_h2o <- h2o::as.h2o(x = fdata.Reg.tr, destination_frame = "fdata_h2o")
 
@@ -192,7 +193,7 @@ h2omod <-h2o:: h2o.deeplearning(x = names(fdata.Reg.tr)[2:ncol(fdata.Reg.tr)],
 # Try SensAnalysisMLP
 NeuralSens::SensAnalysisMLP(h2omod)
 
-# Apaga el cluster
+# Turn off the cluster
 h2o::h2o.shutdown(prompt = FALSE)
 rm(fdata_h2o)
 
@@ -206,8 +207,7 @@ neuralmod <- neural::mlptrain(as.matrix(nntrData[,2:ncol(nntrData)]),
 
 # Try SensAnalysisMLP
 trData <- nntrData
-names(trData)[1] <- ".outcome"
-NeuralSens::SensAnalysisMLP(neuralmod, trData = trData)
+NeuralSens::SensAnalysisMLP(neuralmod, trData = trData, output_name = "DEM")
 
 ## Train RSNNS NNET ------------------------------------------------------------
 # Normalize data using RSNNS algorithms
@@ -220,10 +220,9 @@ RSNNSmod <-RSNNS::mlp(x = trData[,2:ncol(trData)],
                            linOut = TRUE,
                            learnFuncParams=c(decay),
                            maxit=iters)
-names(trData)[1] <- ".outcome"
 
 # Try SensAnalysisMLP
-NeuralSens::SensAnalysisMLP(RSNNSmod, trData = trData)
+NeuralSens::SensAnalysisMLP(RSNNSmod, trData = trData, output_name = "DEM")
 
 ## TRAIN neuralnet NNET --------------------------------------------------------
 # Create a formula to train NNET
@@ -251,7 +250,8 @@ NeuralSens::SensAnalysisMLP(RegNNET$caret$finalModel$wts,
                             trData = fdata.Reg.tv,
                             mlpstr = RegNNET$caret$finalModel$n,
                             coefnames = RegNNET$caret$coefnames,
-                            actfun = c("linear","sigmoid","linear"))
+                            actfun = c("linear","sigmoid","linear"),
+                            output_name = "DEM")
 
 ################################################################################
 #########################  CLASSIFICATION NNET #################################
@@ -294,14 +294,12 @@ caretmod <- caret::train(form = DEM~.,
 NeuralSens::SensAnalysisMLP(caretmod)
 
 ## Train h2o NNET --------------------------------------------------------------
-# Creaci?n de un cluster local con todos los cores disponibles
+# Create local cluster with 4 available cores
 h2o::h2o.init(ip = "localhost",
-              # -1 indica que se empleen todos los cores disponibles.
               nthreads = 4,
-              # M?xima memoria disponible para el cluster.
               max_mem_size = "2g")
 
-# Se eliminan los datos del cluster por si ya hab?a sido iniciado.
+# Reset the cluster
 h2o::h2o.removeAll()
 fdata_h2o <- h2o::as.h2o(x = fdata.Reg.cl, destination_frame = "fdata_h2o")
 
@@ -350,10 +348,9 @@ rm(fdata_h2o)
 #                      linOut = FALSE,
 #                      learnFuncParams=c(decay),
 #                      maxit=iters)
-# names(trData)[1] <- ".outcome"
 #
 # # Try SensAnalysisMLP
-# NeuralSens::SensAnalysisMLP(RSNNSmod, trData = trData)
+# NeuralSens::SensAnalysisMLP(RSNNSmod, trData = trData, output_name = "DEM")
 
 ## TRAIN neuralnet NNET --------------------------------------------------------
 # Create a formula to train NNET
