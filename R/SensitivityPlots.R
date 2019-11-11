@@ -26,7 +26,7 @@
 #' ## Regression dataframe --------------------------------------------------------
 #' # Scale the data
 #' fdata.Reg.tr <- fdata[,2:ncol(fdata)]
-#' fdata.Reg.tr[,2:3] <- fdata.Reg.tr[,2:3]/10
+#' fdata.Reg.tr[,3] <- fdata.Reg.tr[,3]/10
 #' fdata.Reg.tr[,1] <- fdata.Reg.tr[,1]/1000
 #'
 #' # Normalize the data for some models
@@ -66,6 +66,8 @@ SensitivityPlots <- function(sens = NULL,der = NULL) {
         std = apply(der, 2, stats::sd, na.rm = TRUE),
         meanSensSQ = colMeans(der ^ 2, na.rm = TRUE)
       )
+    # Don't know why the names are overwritten so must be written again
+    names(sens) <- c("varNames", "mean", "std", "meanSensSQ")
   } else if(is.null(sens)) {
     stop("Sensitivities must be passed to the function, use NeuralSens::SensAnalysisMLP to calculate them")
   }
@@ -89,26 +91,26 @@ SensitivityPlots <- function(sens = NULL,der = NULL) {
     # If the raw values of the derivatives has been passed to the function
     # the density plots of each of these derivatives can be extracted and plotted
     der2 <- as.data.frame(der)
-    dataplot <- reshape2::melt(der2, measure.vars = sens$varNames)
-    # bwidth <- sd(dataplot$value)/(1.34*(dim(dataplot)[1]/length(varnames)))
-    # In case the data std is too narrow and erase the data
-    if (any(abs(dataplot$value) > 2*max(sens$std, na.rm = TRUE)) ||
-        max(abs(dataplot$value)) < max(sens$std, na.rm = TRUE)) {
-      plotlist[[3]] <- ggplot2::ggplot(dataplot) +
-        ggplot2::geom_density(ggplot2::aes_string(x = "value", fill = "variable"),
-                              alpha = 0.4,
-                              bw = "bcv") +
-        ggplot2::labs(x = "Sens", y = "density(Sens)") +
-        ggplot2::xlim(-1 * max(abs(dataplot$value), na.rm = TRUE),
-                      1 * max(abs(dataplot$value), na.rm = TRUE))
+    names(der2) <- sens$varNames
+    # Remove any variable which is all zero -> pruned variable
+    der2 <- der2[,!sapply(der2,function(x){all(x ==  0)})]
+    dataplot <- reshape2::melt(der2, measure.vars = names(der2))
+
+    # Check the right x limits for the density plots
+    quant <- stats::quantile(abs(dataplot$value), c(0.8, 1))
+    if (10*quant[1] < quant[2]) { # Distribution has too much dispersion
+      xlim <- c(1,-1)*max(abs(stats::quantile(dataplot$value, c(0.2,0.8))))
     } else {
-      plotlist[[3]] <- ggplot2::ggplot(dataplot) +
-        ggplot2::geom_density(ggplot2::aes_string(x = "value", fill = "variable"),
-                              alpha = 0.4,
-                              bw = "bcv") +
-        ggplot2::labs(x = "Sens", y = "density(Sens)") +
-        ggplot2::xlim(-2 * max(sens$std, na.rm = TRUE), 2 * max(sens$std, na.rm = TRUE))
+      xlim <- c(-1.1, 1.1)*max(abs(dataplot$value), na.rm = TRUE)
     }
+
+    plotlist[[3]] <- ggplot2::ggplot(dataplot) +
+      ggplot2::geom_density(ggplot2::aes_string(x = "value", fill = "variable"),
+                            alpha = 0.4,
+                            bw = "bcv") +
+      ggplot2::labs(x = "Sens", y = "density(Sens)") +
+      ggplot2::xlim(xlim)
+      # ggplot2::xlim(-2 * max(sens$std, na.rm = TRUE), 2 * max(sens$std, na.rm = TRUE))
   }
   # Plot the list of plots created before
   gridExtra::grid.arrange(grobs = plotlist,

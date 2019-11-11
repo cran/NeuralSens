@@ -34,14 +34,15 @@
 #'
 #'   After that, the training data must be given to the function using the
 #'   \code{trData} argument.
+#' @references \url{https://www.researchgate.net/publication/220577792_Use_of_some_sensitivity_criteria_for_choosing_networks_with_good_generalization_ability}
 #' @examples
 #' ## Load data -------------------------------------------------------------------
 #' data("DAILY_DEMAND_TR")
 #' fdata <- DAILY_DEMAND_TR
-#'
+#' fdata[,3] <- ifelse(as.data.frame(fdata)[,3] %in% c("SUN","SAT"), 0, 1)
 #' ## Parameters of the NNET ------------------------------------------------------
 #' hidden_neurons <- 5
-#' iters <- 250
+#' iters <- 100
 #' decay <- 0.1
 #'
 #' ################################################################################
@@ -50,7 +51,7 @@
 #' ## Regression dataframe --------------------------------------------------------
 #' # Scale the data
 #' fdata.Reg.tr <- fdata[,2:ncol(fdata)]
-#' fdata.Reg.tr[,2:3] <- fdata.Reg.tr[,2:3]/10
+#' fdata.Reg.tr[,3] <- fdata.Reg.tr[,3]/10
 #' fdata.Reg.tr[,1] <- fdata.Reg.tr[,1]/1000
 #'
 #' # Normalize the data for some models
@@ -439,6 +440,7 @@ SensAnalysisMLP.default <- function(MLP.fit, .returnSens = TRUE, plot = TRUE, .r
       std = apply(der[, , 1], 2, stats::sd, na.rm = TRUE),
       meanSensSQ = colMeans(der[, , 1] ^ 2, na.rm = TRUE)
     )
+  rownames(sens) <- NULL
 
   if (plot) {
     # show plots if required
@@ -458,12 +460,32 @@ SensAnalysisMLP.default <- function(MLP.fit, .returnSens = TRUE, plot = TRUE, .r
             std = apply(der[, , i], 2, stats::sd, na.rm = TRUE),
             meanSensSQ = colMeans(der[, , i] ^ 2, na.rm = TRUE)
           )
+          rownames(sens[[i]]) <- NULL
         }
-        names(sens) <- make.names(levels(trData$.outcome), unique = TRUE)
+        if (is.factor(trData$.outcome)) {
+          names(sens) <- make.names(unique(trData$.outcome), unique = TRUE)
+        } else if (!is.null(output_name)) {
+          if (length(output_name) > 2) {
+            names(sens <- output_name)
+          }
+        }
       }
       return(sens)
     } else {
       # Return sensitivities without processing
+      if (mlpstr[length(mlpstr)] > 1) {
+        if (is.factor(trData$.outcome)) {
+          names(sens) <- make.names(unique(trData$.outcome), unique = TRUE)
+        } else if (!is.null(output_name)) {
+          if (length(output_name) > 2) {
+            names(sens <- output_name)
+          }
+        }
+      } else {
+        if (!is.null(output_name)) {
+          dimnames(der)[[3]] <- output_name
+        }
+      }
       return(der)
     }
   }
@@ -855,11 +877,31 @@ SensAnalysisMLP.mlp <- function(MLP.fit, .returnSens = TRUE, plot = TRUE, .rawSe
   nwts <- NeuralNetTools::neuralweights(MLP.fit)
   finalModel <- NULL
   finalModel$n <- nwts$struct
+  # Fill NAs with the corresponding bias
+  for (i in netInfo$unitDefinitions$unitNo[netInfo$unitDefinitions$type %in%
+                                           c("UNIT_HIDDEN")]) {
+    hidname <- paste("hidden",
+                     as.character(netInfo$unitDefinitions$posY[i]/2),
+                     as.character(netInfo$unitDefinitions$posX[i]),
+                     sep = " ")
+    nwts$wts[[which(hidname == names(nwts$wts))]][1] <- netInfo$unitDefinitions$unitBias[i]
+  }
+  for (i in netInfo$unitDefinitions$unitNo[netInfo$unitDefinitions$type %in%
+                                           c("UNIT_OUTPUT")]) {
+    outname <- paste("out",
+                     as.character(substr(netInfo$unitDefinitions$unitName[i],
+                                         nchar(netInfo$unitDefinitions$unitName[i]),
+                                         nchar(netInfo$unitDefinitions$unitName[i]))),
+                     sep = " ")
+    nwts$wts[[which(outname == names(nwts$wts))]][1] <- netInfo$unitDefinitions$unitBias[i]
+  }
+
   wts <- c()
   for (i in 1:length(nwts$wts)){
     wts <- c(wts, nwts$wts[[i]])
   }
-  wts[is.na(wts)] <- netInfo$unitDefinitions$unitBias[(nrow(netInfo$unitDefinitions)-sum(finalModel$n[2:length(finalModel$n)])+1):nrow(netInfo$unitDefinitions)]
+
+  wts[is.na(wts)] <- 0
   finalModel$wts <- wts
   finalModel$coefnames <- substr(netInfo$unitDefinitions$unitName[1:finalModel$n[1]],
                                  nchar("Input_")+1, 100000)
@@ -907,34 +949,64 @@ SensAnalysisMLP.mlp <- function(MLP.fit, .returnSens = TRUE, plot = TRUE, .rawSe
 #'
 #' @method SensAnalysisMLP nn
 SensAnalysisMLP.nn <- function(MLP.fit, .returnSens = TRUE, plot = TRUE, .rawSens = FALSE, preProc = NULL, terms = NULL, ...) {
+
   # For a neuralnet nn
   args <- list(...)
   finalModel <- NULL
-  finalModel$n <- c(nrow(MLP.fit$weights[[1]][[1]])-1,ncol(MLP.fit$weights[[1]][[1]]),ncol(MLP.fit$weights[[1]][[2]]))
-  wts <- c()
-  for(i in 1:ncol(MLP.fit$weights[[1]][[1]])){
-    wts <- c(wts, MLP.fit$weights[[1]][[1]][,i])
-  }
-  for(i in 1:ncol(MLP.fit$weights[[1]][[2]])){
-    wts <- c(wts, MLP.fit$weights[[1]][[2]][,i])
-  }
-  finalModel$wts <- wts
   finalModel$coefnames <- MLP.fit$model.list$variables
   trData <- MLP.fit$data
-  names(trData)[names(trData) == MLP.fit$model.list$response] <- ".outcome"
   actfun <- c("linear",
-              ifelse(attributes(MLP.fit$act.fct)$type == "tanh", "tanh", "sigmoid"),
+              rep(ifelse(attributes(MLP.fit$act.fct)$type == "tanh", "tanh", "sigmoid"),
+                  length(MLP.fit$weights[[1]])-1),
               ifelse(MLP.fit$linear.output, "linear", "sigmoid"))
-  SensAnalysisMLP.default(finalModel,
-                          trData = trData,
-                          actfunc = actfun,
-                          .returnSens = .returnSens,
-                          .rawSens = .rawSens,
-                          preProc = preProc,
-                          terms = terms,
-                          plot = plot,
-                          output_name = if("output_name" %in% names(args)){args$output_name}else{".outcome"},
-                          args[!names(args) %in% c("output_name")])
+  sensit <- array(NA, dim = c(length(MLP.fit$weights)*nrow(trData),
+                              length(MLP.fit$model.list$variables),
+                              length(MLP.fit$model.list$response)))
+  for (j in 1:length(MLP.fit$weights)) {
+    finalModel$n <- NULL
+    wts <- c()
+    for (i in 1:length(MLP.fit$weights[[j]])) {
+      wts <- c(wts, as.vector(MLP.fit$weights[[j]][[i]]))
+      finalModel$n <- c(finalModel$n, dim(MLP.fit$weights[[j]][[i]])[1]-1)
+    }
+    finalModel$n <- c(finalModel$n, dim(MLP.fit$weights[[j]][[i]])[2])
+    finalModel$wts <- wts
+    sensitivities <- SensAnalysisMLP.default(finalModel,
+                            trData = trData,
+                            actfunc = actfun,
+                            .returnSens = TRUE,
+                            .rawSens = TRUE,
+                            preProc = preProc,
+                            terms = terms,
+                            plot = FALSE,
+                            output_name = names(trData)[names(trData) == MLP.fit$model.list$response],
+                            args[!names(args) %in% c("output_name")])
+    sensit[((j-1)*nrow(trData)+1):(j*nrow(trData)),,] <- sensitivities
+  }
+  colnames(sensit) <- finalModel$coefnames
+
+  sens <-
+    data.frame(
+      varNames = finalModel$coefnames,
+      mean = colMeans(sensit[, , 1], na.rm = TRUE),
+      std = apply(sensit[, , 1], 2, stats::sd, na.rm = TRUE),
+      meanSensSQ = colMeans(sensit[, , 1] ^ 2, na.rm = TRUE)
+    )
+
+  if (plot) {
+    # show plots if required
+    NeuralSens::SensitivityPlots(sens,der = sensit[,,1])
+  }
+
+  if (.returnSens) {
+    if(!.rawSens) {
+      # Check if there are more than one output
+      return(sens)
+    } else {
+      # Return sensitivities without processing
+      return(sensit)
+    }
+  }
 }
 
 #' @rdname SensAnalysisMLP
@@ -984,10 +1056,10 @@ SensAnalysisMLP.nnetar <- function(MLP.fit, .returnSens = TRUE, plot = TRUE, .ra
   args = list(...)
   if (!is.null(MLP.fit$xreg)) {
     if ("trData" %in% names(args)) {
-      xreg <- args$trData[,attr(MLP.fit$xreg,"dimnames")[[2]]]
+      xreg <- as.data.frame(args$trData[,attr(MLP.fit$xreg,"dimnames")[[2]]])
       if(".outcome" %in% names(args$trData)) {
         outcome <- args$trData$.outcome
-      } else if (!"output_name" %in% names(args)) {
+      } else if ("output_name" %in% names(args)) {
         outcome <- args$trData[,args$output_name]
       } else {
         stop("Change the name of the output variable to '.outcome' or
@@ -1037,10 +1109,10 @@ SensAnalysisMLP.nnetar <- function(MLP.fit, .returnSens = TRUE, plot = TRUE, .ra
 
   if (!is.null(MLP.fit$xreg)) {
     trData <- cbind(ylagged, xreg, as.data.frame(outcome))
-    varnames <- c(names(trData)[1:MLP.fit$p],names(as.data.frame(MLP.fit$xreg)))
+    varnames <- c(names(trData)[1:length(lags)],names(as.data.frame(MLP.fit$xreg)))
   } else {
     trData <- cbind(ylagged, as.data.frame(outcome))
-    varnames <- names(trData)[1:MLP.fit$p]
+    varnames <- names(trData)[1:length(lags)]
   }
 
   if ("output_name" %in% names(args)) {
@@ -1060,6 +1132,9 @@ SensAnalysisMLP.nnetar <- function(MLP.fit, .returnSens = TRUE, plot = TRUE, .ra
               ifelse(is.factor(trData$.outcome),"sigmoid","linear"))
   finalModel$coefnames <- varnames
   # Apply default function to all the models in the nnetar object
+  sensit <- array(NA, dim = c(length(MLP.fit$model)*nrow(trData),
+                              MLP.fit$model[[1]]$n[1],
+                              MLP.fit$model[[1]]$n[length(MLP.fit$model[[1]]$n)]))
   for (i in 1:length(MLP.fit$model)) {
     finalModel$wts <- MLP.fit$model[[1]]$wts
     sensitivities[[i]] <-  SensAnalysisMLP.default(finalModel,
@@ -1070,26 +1145,23 @@ SensAnalysisMLP.nnetar <- function(MLP.fit, .returnSens = TRUE, plot = TRUE, .ra
                                               preProc = NULL,
                                               terms = NULL,
                                               plot = FALSE,
-                                              output_name = if("output_name" %in% names(args)){args$output_name}else{".outcome"}
-    )
+                                              output_name = if("output_name" %in% names(args)){args$output_name}else{".outcome"})
+    sensit[((i-1)*nrow(trData)+1):(i*nrow(trData)),,] <- sensitivities[[i]]
   }
 
-  sensitivities <- as.data.frame(do.call("rbind",lapply(sensitivities,
-                                               function(x) {
-                                                 as.data.frame(x[1:dim(x)[1],1:dim(x)[2],1])
-                                               })))
+  colnames(sensit) <- finalModel$coefnames
 
   sens <-
     data.frame(
       varNames = varnames,
-      mean = base::colMeans(sensitivities, na.rm = TRUE),
-      std = sapply(sensitivities,stats::sd, na.rm = TRUE),
-      meanSensSQ = base::colMeans(sensitivities ^ 2, na.rm = TRUE)
+      mean = colMeans(sensit[, , 1], na.rm = TRUE),
+      std = apply(sensit[, , 1], 2, stats::sd, na.rm = TRUE),
+      meanSensSQ = colMeans(sensit[, , 1] ^ 2, na.rm = TRUE)
     )
 
   if (plot) {
     # show plots if required
-    NeuralSens::SensitivityPlots(sens,der = sensitivities[,,1])
+    NeuralSens::SensitivityPlots(sens,der = sensit[,,1])
   }
 
   if (.returnSens) {
@@ -1098,8 +1170,7 @@ SensAnalysisMLP.nnetar <- function(MLP.fit, .returnSens = TRUE, plot = TRUE, .ra
       return(sens)
     } else {
       # Return sensitivities without processing
-      colnames(sensitivities) <- finalModel$coefnames
-      return(sensitivities)
+      return(sensit)
     }
   }
 }
