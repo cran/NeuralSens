@@ -12,7 +12,7 @@
 \alias{SensAnalysisMLP.nnet}
 \alias{SensAnalysisMLP.nnetar}
 \alias{SensAnalysisMLP.numeric}
-\title{Sensitivity of NNET models}
+\title{Sensitivity of MLP models}
 \usage{
 SensAnalysisMLP(
   MLP.fit,
@@ -37,6 +37,7 @@ SensAnalysisMLP(
   sens_end_input = FALSE,
   trData,
   actfunc = NULL,
+  deractfunc = NULL,
   preProc = NULL,
   terms = NULL,
   output_name = NULL,
@@ -159,6 +160,7 @@ SensAnalysisMLP(
   sens_origin_input = TRUE,
   sens_end_input = FALSE,
   trData,
+  actfunc = NULL,
   preProc = NULL,
   terms = NULL,
   ...
@@ -167,15 +169,12 @@ SensAnalysisMLP(
 \arguments{
 \item{MLP.fit}{fitted neural network model}
 
-\item{.returnSens}{\code{logical} value. If \code{TRUE}, sensitivity of the
-model is returned.}
+\item{.returnSens}{DEPRECATED}
 
 \item{plot}{\code{logical} whether or not to plot the analysis. By default is
 \code{TRUE}.}
 
-\item{.rawSens}{\code{logical} whether or not to return the sensitivity of
-each row of the data provided, or return the mean, sd and mean of the
-square of the sensitivities. By default is \code{FALSE}.}
+\item{.rawSens}{DEPRECATED}
 
 \item{sens_origin_layer}{\code{numeric} specifies the layer of neurons with
 respect to which the derivative must be calculated. The input layer is
@@ -196,11 +195,13 @@ is of the output (\code{FALSE}) or from the input (\code{TRUE}) of the
 
 \item{...}{additional arguments passed to or from other methods}
 
-\item{trData}{\code{data.frame} containing the data to evaluate the
-sensitivity of the model}
+\item{trData}{\code{data.frame} containing the data to evaluate the sensitivity of the model}
 
-\item{actfunc}{\code{character} vector indicating the activation function of
-each neurons layer.}
+\item{actfunc}{\code{character} vector indicating the activation function of each
+neurons layer.}
+
+\item{deractfunc}{\code{character} vector indicating the derivative of the activation
+function of each neurons layer.}
 
 \item{preProc}{preProcess structure applied to the training data. See also
 \code{\link[caret]{preProcess}}}
@@ -213,10 +214,8 @@ avoid changing the name of the output variable in \code{trData} to
 '.outcome'}
 }
 \value{
-dataframe with the sensitivities obtained for each variable if
-  \code{.returnSens = TRUE}. If \code{.returnSens = FALSE}, the sensitivities
-  without processing are returned in a 3D array. If there is more than one
-  output, the sensitivities of each output are given in a list.
+\code{SensMLP} object with the sensitivity metrics and sensitivities of
+the MLP model passed to the function.
 }
 \description{
 Function for evaluating the sensitivities of the inputs
@@ -382,10 +381,10 @@ NeuralSens::SensAnalysisMLP(nnmod)
 
 
 ## USE DEFAULT METHOD ----------------------------------------------------------
-NeuralSens::SensAnalysisMLP(RegNNET$caret$finalModel$wts,
+NeuralSens::SensAnalysisMLP(caretmod$finalModel$wts,
                             trData = fdata.Reg.tv,
-                            mlpstr = RegNNET$caret$finalModel$n,
-                            coefnames = RegNNET$caret$coefnames,
+                            mlpstr = caretmod$finalModel$n,
+                            coefnames = caretmod$coefnames,
                             actfun = c("linear","sigmoid","linear"),
                             output_name = "DEM")
 
