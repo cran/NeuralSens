@@ -1,7 +1,7 @@
 Package: NeuralSens
-Version: 0.2.1
+Version: 0.2.2
 Title: Sensitivity Analysis of Neural Networks
-Date: 2020-05-15
+Date: 2020-11-11
 Description: Analysis functions to quantify inputs importance in neural network models.
   Functions are available for calculating and plotting the inputs importance and obtaining
   the activation function of each neuron layer and its derivatives. The importance of a given
@@ -13,8 +13,8 @@ Author: José Portela González [aut],
 Maintainer: Jaime Pizarroso Gonzalo <jpizarroso@comillas.edu>
 Imports: ggplot2, gridExtra, NeuralNetTools, reshape2, caret,
         fastDummies, stringr, Hmisc, ggforce, scales, ggnewscale
-Suggests: h2o, neural, RSNNS, nnet, neuralnet
-RoxygenNote: 7.1.0
+Suggests: h2o, neural, RSNNS, nnet, neuralnet, e1071
+RoxygenNote: 7.1.1
 NeedsCompilation: no
 URL: https://github.com/JaiPizGon/NeuralSens
 BugReports: https://github.com/JaiPizGon/NeuralSens/issues
@@ -29,6 +29,6 @@ Authors@R: c(
     person(given = "Jaime", family = "Pizarroso Gonzalo",
       email = "jpizarroso@comillas.edu", role = c("aut","ctb", "cre"))
     )
-Packaged: 2020-05-15 07:49:09 UTC; Jaime
+Packaged: 2020-11-11 14:49:17 UTC; Jaime
 Repository: CRAN
-Date/Publication: 2020-05-15 08:10:02 UTC
+Date/Publication: 2020-11-16 16:00:05 UTC

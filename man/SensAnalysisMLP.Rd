@@ -302,8 +302,7 @@ NeuralSens::SensAnalysisMLP(caretmod)
 ## Train h2o NNET --------------------------------------------------------------
 # Create a cluster with 4 available cores
 h2o::h2o.init(ip = "localhost",
-              nthreads = 4,
-              max_mem_size = "2g")
+              nthreads = 4)
 
 # Reset the cluster
 h2o::h2o.removeAll()
@@ -342,7 +341,8 @@ neuralmod <- neural::mlptrain(as.matrix(nntrData[,2:ncol(nntrData)]),
 
 # Try SensAnalysisMLP
 trData <- nntrData
-NeuralSens::SensAnalysisMLP(neuralmod, trData = trData, output_name = "DEM")
+NeuralSens::SensAnalysisMLP(neuralmod, trData = trData, output_name = "DEM",
+                            actfunc = c("linear","sigmoid","linear"))
 
 ## Train RSNNS NNET ------------------------------------------------------------
 # Normalize data using RSNNS algorithms
@@ -359,30 +359,9 @@ RSNNSmod <-RSNNS::mlp(x = trData[,2:ncol(trData)],
 # Try SensAnalysisMLP
 NeuralSens::SensAnalysisMLP(RSNNSmod, trData = trData, output_name = "DEM")
 
-## TRAIN neuralnet NNET --------------------------------------------------------
-# Create a formula to train NNET
-form <- paste(names(fdata.Reg.tr)[2:ncol(fdata.Reg.tr)], collapse = " + ")
-form <- formula(paste(names(fdata.Reg.tr)[1], form, sep = " ~ "))
-
-set.seed(150)
-nnmod <- neuralnet::neuralnet(form,
-                                   nntrData,
-                                   linear.output = TRUE,
-                                   rep = 1,
-                                   hidden = hidden_neurons,
-                                   lifesign = "minimal",
-                                   threshold = 7,
-                                   stepmax = iters,
-                                   learningrate = decay,
-                                   act.fct = "tanh")
-
-# Try SensAnalysisMLP
-NeuralSens::SensAnalysisMLP(nnmod)
-
-
 ## USE DEFAULT METHOD ----------------------------------------------------------
 NeuralSens::SensAnalysisMLP(caretmod$finalModel$wts,
-                            trData = fdata.Reg.tv,
+                            trData = fdata.Reg.tr,
                             mlpstr = caretmod$finalModel$n,
                             coefnames = caretmod$coefnames,
                             actfun = c("linear","sigmoid","linear"),
@@ -431,8 +410,7 @@ NeuralSens::SensAnalysisMLP(caretmod)
 ## Train h2o NNET --------------------------------------------------------------
 # Create local cluster with 4 available cores
 h2o::h2o.init(ip = "localhost",
-              nthreads = 4,
-              max_mem_size = "2g")
+              nthreads = 4)
 
 # Reset the cluster
 h2o::h2o.removeAll()
@@ -460,52 +438,6 @@ NeuralSens::SensAnalysisMLP(h2omod)
 # Apaga el cluster
 h2o::h2o.shutdown(prompt = FALSE)
 rm(fdata_h2o)
-
-## Train neural NNET -----------------------------------------------------------
-# set.seed(150)
-# neuralmod <-mlptrain(as.matrix(nntrData[,2:ncol(nntrData)]),
-#                           hidden_neurons,
-#                           as.matrix(nntrData[1]),
-#                           it=iters,
-#                           visual=FALSE)
-#
-# # Try SensAnalysisMLP
-# NeuralSens::SensAnalysisMLP(neuralmod, trData = trData)
-
-# ## Train RSNNS NNET ------------------------------------------------------------
-# # Normalize data using RSNNS algorithms
-# trData <- as.data.frame(RSNNS::normalizeData(fdata.Reg.cl))
-# names(trData) <- names(fdata.Reg.tr)
-# set.seed(150)
-# RSNNSmod <- RSNNS::mlp(x = trData[,2:ncol(trData)],
-#                      y = trData[,1],
-#                      size = hidden_neurons,
-#                      linOut = FALSE,
-#                      learnFuncParams=c(decay),
-#                      maxit=iters)
-#
-# # Try SensAnalysisMLP
-# NeuralSens::SensAnalysisMLP(RSNNSmod, trData = trData, output_name = "DEM")
-
-## TRAIN neuralnet NNET --------------------------------------------------------
-# Create a formula to train NNET
-# form <- paste(names(fdata.Reg.tr)[2:ncol(fdata.Reg.tr)], collapse = " + ")
-# form <- formula(paste(names(fdata.Reg.tr)[1], form, sep = " ~ "))
-#
-# set.seed(150)
-# nnmod <- neuralnet(form,
-#                    nntrData,
-#                    linear.output = FALSE,
-#                    rep = 1,
-#                    hidden = hidden_neurons,
-#                    lifesign = "minimal",
-#                    threshold = 4,
-#                    stepmax = iters,
-#                    learningrate = decay,
-#                    act.fct = "tanh")
-#
-# # Try SensAnalysisMLP
-# NeuralSens::SensAnalysisMLP(nnmod)
 
 ## TRAIN nnet NNET --------------------------------------------------------
 # Create a formula to train NNET
