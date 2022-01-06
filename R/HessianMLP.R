@@ -258,14 +258,14 @@
 #' @export
 #' @rdname HessianMLP
 HessianMLP <- function(MLP.fit,
-                            .returnSens = TRUE,
-                            plot = TRUE,
-                            .rawSens = FALSE,
-                            sens_origin_layer = 1,
-                            sens_end_layer = "last",
-                            sens_origin_input = TRUE,
-                            sens_end_input = FALSE,
-                            ...) UseMethod('HessianMLP', MLP.fit)
+                        .returnSens = TRUE,
+                        plot = TRUE,
+                        .rawSens = FALSE,
+                        sens_origin_layer = 1,
+                        sens_end_layer = "last",
+                        sens_origin_input = TRUE,
+                        sens_end_input = FALSE,
+                        ...) UseMethod('HessianMLP', MLP.fit)
 
 #' @rdname HessianMLP
 #'
@@ -317,8 +317,8 @@ HessianMLP.default <- function(MLP.fit,
   # TestData
   dummies <-
     caret::dummyVars(
-      .outcome ~ .,
-      data = trData,
+      ~ .,
+      data = trData[,names(trData) != output_name, drop = FALSE],
       fullRank = TRUE,
       sep = NULL
     )
@@ -351,14 +351,14 @@ HessianMLP.default <- function(MLP.fit,
 
   # Intermediate structures with data necessary to calculate the structures above
   #    - Z stores the values just before entering the neuron, i.e., sum(weights*inputs)
-  #    for each layer of neurons
-  #    - O stores the output values of each layer of neurons
-  #    - W stores the weights of the inputs of each layer of neurons
-  #    - D stores the derivative of the output values of each layer of neurons (Jacobian)
-  #    - D2 stores the second derivatives of the output values of each layer of neurones (Hessian)
-  #    - X stores the cross derivatives of the output value of a layer with respect of two inputs
+  #    for each layer of neurons (z)
+  #    - O stores the output values of each layer of neurons (o)
+  #    - W stores the weights of the inputs of each layer of neurons (W)
+  #    - D stores the derivative of the output values of each layer of neurons (Jacobian^l_l)
+  #    - D2 stores the second derivatives of the output values of each layer of neurons (Hessian^l_l)
+  #    - X stores the cross derivatives of the output value of a layer with respect of two inputs (Hessian^l_p)
   #    - Q stores the cross derivatives of the input value of a layer with respect of two inputs
-  #    - D_ stores the derivatives of the output values with respect of one input
+  #    - D_ stores the derivatives of the output values with respect of one input (Jacobian^l_p)
   Z <- list()
   O <- list()
   W <- list()
@@ -497,10 +497,11 @@ HessianMLP.train <- function(MLP.fit,
              sens_end_layer = sens_end_layer,
              sens_origin_input = sens_origin_input,
              sens_end_input = sens_end_input,
+             output_name = if ("output_name" %in% names(args)) {args$preProc} else {".outcome"},
              preProc = if ("preProc" %in% names(args)) {args$preProc} else {MLP.fit$preProcess},
              terms = if ("terms" %in% names(args)) {args$terms} else {MLP.fit$terms},
              plot = plot,
-             args[!names(args) %in% c("trData","preProc","terms")])
+             args[!names(args) %in% c("trData","preProc","terms","output_name")])
 }
 
 #' @rdname HessianMLP
@@ -1105,14 +1106,18 @@ HessianMLP.nnet <- function(MLP.fit,
   finalModel$n <- MLP.fit$n
   finalModel$wts <- MLP.fit$wts
   finalModel$coefnames <- MLP.fit$coefnames
+  output_name <- ".outcome"
   if(!any(names(trData) == ".outcome")){
     if (!"output_name" %in% names(args)) {
+      output_name <- ".outcome"
       names(trData)[!names(trData) %in% attr(MLP.fit$terms,"term.labels")] <- ".outcome"
+    } else {
+      output_name <- args$output_name
     }
   }
 
   actfun <- c("linear","sigmoid",
-              ifelse(is.factor(trData$.outcome),"sigmoid","linear"))
+              ifelse(is.factor(trData[,output_name]),"sigmoid","linear"))
   HessianMLP.default(finalModel,
                      trData = trData,
                      actfunc = actfun,
@@ -1125,7 +1130,7 @@ HessianMLP.nnet <- function(MLP.fit,
                      preProc = preProc,
                      terms = terms,
                      plot = plot,
-                     output_name = if("output_name" %in% names(args)){args$output_name}else{".outcome"},
+                     output_name = output_name,
                      deractfunc = if("deractfunc" %in% names(args)){args$deractfunc}else{NULL},
                      der2actfunc = if("der2actfunc" %in% names(args)){args$der2actfunc}else{NULL},
                      args[!names(args) %in% c("output_name","deractfunc")])
@@ -1225,9 +1230,9 @@ HessianMLP.nnetar <- function(MLP.fit,
               ifelse(is.factor(trData$.outcome),"sigmoid","linear"))
   finalModel$coefnames <- varnames
   # Apply default function to all the models in the nnetar object
-  sensit <- array(NA, dim = c(length(MLP.fit$model)*nrow(trData),
+  sensit <- array(NA, dim = c(MLP.fit$model[[1]]$n[1],
                               MLP.fit$model[[1]]$n[1],
-                              MLP.fit$model[[1]]$n[length(MLP.fit$model[[1]]$n)]))
+                              length(MLP.fit$model)*nrow(trData)))
   for (i in 1:length(MLP.fit$model)) {
     finalModel$wts <- MLP.fit$model[[1]]$wts
     sensitivities[[i]] <-  HessianMLP.default(finalModel,
@@ -1244,19 +1249,34 @@ HessianMLP.nnetar <- function(MLP.fit,
                                               preProc = NULL,
                                               terms = NULL,
                                               plot = FALSE,
-                                              output_name = if("output_name" %in% names(args)){args$output_name}else{".outcome"})
-    sensit[((i-1)*nrow(trData)+1):(i*nrow(trData)),,] <- sensitivities[[i]]$raw_sens
+                                              output_name = if("output_name" %in% names(args)){args$output_name}else{".outcome"},
+                                              args[!names(args) %in% c("output_name","deractfunc")])
+    sensit[,,((i-1)*nrow(trData)+1):(i*nrow(trData))] <- sensitivities[[i]]$raw_sens[[1]]
   }
 
   colnames(sensit) <- finalModel$coefnames
+  rownames(sensit) <- finalModel$coefnames
 
-  sens <-
-    data.frame(
-      varNames = varnames,
-      mean = colMeans(sensit[, , 1], na.rm = TRUE),
-      std = apply(sensit[, , 1], 2, stats::sd, na.rm = TRUE),
-      meanSensSQ = colMeans(sensit[, , 1] ^ 2, na.rm = TRUE)
-    )
+  rs <- list()
+  out <- list()
+  out[[1]] <- list(
+    mean = apply(sensit, c(1,2), mean, na.rm = TRUE),
+    std = apply(sensit, c(1,2), stats::sd, na.rm = TRUE),
+    meanSensSQ = apply(sensit^2, c(1,2), mean, na.rm = TRUE)
+  )
+  rs[[1]] <- sensit
+
+  names(out) <- if("output_name" %in% names(args)){args$output_name}else{".outcome"}
+  names(rs) <- if("output_name" %in% names(args)){args$output_name}else{".outcome"}
+
+  sens <- HessMLP(
+    out,
+    rs,
+    MLP.fit$model[[1]]$n,
+    trData,
+    varnames,
+    if("output_name" %in% names(args)){args$output_name}else{".outcome"}
+  )
 
   if (plot) {
     # show plots if required
