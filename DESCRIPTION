@@ -1,7 +1,7 @@
 Package: NeuralSens
-Version: 1.0.2
+Version: 1.0.3
 Title: Sensitivity Analysis of Neural Networks
-Date: 2023-03-07
+Date: 2023-06-16
 Description: Analysis functions to quantify inputs importance in neural network models.
   Functions are available for calculating and plotting the inputs importance and obtaining
   the activation function of each neuron layer and its derivatives. The importance of a given
@@ -30,6 +30,6 @@ Authors@R: c(
     person(given = "Jaime", family = "Pizarroso Gonzalo",
       email = "jpizarroso@comillas.edu", role = c("aut","ctb", "cre"))
     )
-Packaged: 2023-03-07 10:59:14 UTC; jaime
+Packaged: 2023-06-17 14:24:39 UTC; jaime
 Repository: CRAN
-Date/Publication: 2023-03-07 12:00:06 UTC
+Date/Publication: 2023-06-17 14:40:02 UTC

@@ -1,7 +1,7 @@
-6981255ab2ef9aafe2703fa14ba32645 *DESCRIPTION
+3924f18f714a70a7ccae8c638b52f98f *DESCRIPTION
 c0e7c58511e0f45fa3b89fae2ef40a47 *NAMESPACE
 7068f887e0524990b5fa57b3a4262cb1 *R/ActFunc.R
-c2d38f477411c0e56eb079a19493c6ab *R/AlphaSensCurve.R
+c7e239d1ccc784479fcf215f66ecae73 *R/AlphaSensCurve.R
 3cc93a273e32735bdceb25573056f9f8 *R/CombineSens.R
 6f1563c3f1ab7d8714a776f693f30e87 *R/ComputeHessMeasures.R
 43adcbba8c8ece34d02ecc5771c35ac5 *R/ComputeSensMeasures.R
@@ -17,7 +17,7 @@ c8ad6473f8ee3ebdea7a064e1d84272e *R/PlotSensMLP.R
 e4e703e61996afb64e6443bbb67b1fde *R/SensMLP.R
 4eec1e97294cc85a79ce69809b4fabfb *R/SensMatPlot.R
 bb8762ffda6d711e113208e3b21624ac *R/SensTimePlot.R
-d4b20d3ce69c6aa32fa19f14ea023d36 *R/SensitivityPlots.R
+dc6124dbc6b905ceaa21aa9e66bbffd0 *R/SensitivityPlots.R
 5fb986330dc4a883959be813b9cab1e3 *R/data.R
 cfa3ed1948f4904781cdce1b81d0417f *R/diag3Darray.R
 a22e919c5c896a700c11d138e0f885d8 *R/diag4Darray.R
@@ -27,7 +27,7 @@ db3c7955e4b75561d386506742e05da7 *data/DAILY_DEMAND_TR.rdata
 350b91063c4f1fa59ac9e0e23ce340b0 *data/syntheticdata.rdata
 eac0afe4d65b3557bd2083c4f8cc028e *inst/CITATION
 af17c30604d71655754d4027dca6888c *man/ActFunc.Rd
-963f6ab277552f3ab8affe68bd65a3a8 *man/AlphaSensAnalysis.Rd
+0b270f53b3b740a30d2e244a430cc265 *man/AlphaSensAnalysis.Rd
 c1c11d26240b9ab08e06df75d3d071b4 *man/AlphaSensCurve.Rd
 cf7d0974e822dc1c4411b090721b97bc *man/CombineSens.Rd
 ec3e3a7045d89679aac0c7303014e4ba *man/ComputeHessMeasures.Rd
@@ -50,7 +50,7 @@ ede35795aee8ae319da4508831569a2b *man/SensDotPlot.Rd
 66b3bc3cb4299b75e95dc11f99e2e4e4 *man/SensMLP.Rd
 32fc8dfda94b8c974b94c05dc76b6223 *man/SensMatPlot.Rd
 483033e9b0c4627f008f85dbd82b602f *man/SensTimePlot.Rd
-5987cb75793af48db408485d31ffeb47 *man/SensitivityPlots.Rd
+4bb8630050d5fd0f601f6bed013a2ba5 *man/SensitivityPlots.Rd
 b5502042126ab8485eb18525109c9569 *man/diag3Darray-set.Rd
 9a49e983fda108adcafdec15db696a69 *man/diag3Darray.Rd
 c541ccbd0f6b4bfecb253df0d9f4237b *man/diag4Darray-set.Rd
